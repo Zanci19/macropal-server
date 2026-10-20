@@ -138,6 +138,23 @@ def truncate(conn: psycopg.Connection) -> None:
         )
 
 
+def scrub(value: object) -> object:
+    if isinstance(value, str):
+        return value.replace("\x00", "") if "\x00" in value else value
+
+    if isinstance(value, list):
+        return [scrub(item) for item in value]
+
+    if isinstance(value, dict):
+        return {key: scrub(item) for key, item in value.items()}
+
+    return value
+
+
+def scrub_row(row: tuple) -> tuple:
+    return tuple(scrub(value) for value in row)
+
+
 def copy_foods(conn: psycopg.Connection, rows: list[tuple]) -> int:
     statement = sql.SQL("COPY {} ({}) FROM STDIN").format(
         sql.Identifier(STAGING_FOODS), _columns(FOOD_COLUMNS)
@@ -145,7 +162,7 @@ def copy_foods(conn: psycopg.Connection, rows: list[tuple]) -> int:
 
     with conn.cursor() as cur, cur.copy(statement) as copy:
         for row in rows:
-            copy.write_row(row)
+            copy.write_row(scrub_row(row))
 
     return len(rows)
 
@@ -160,7 +177,7 @@ def copy_nutrients(conn: psycopg.Connection, rows: list[tuple]) -> int:
 
     with conn.cursor() as cur, cur.copy(statement) as copy:
         for row in rows:
-            copy.write_row(row)
+            copy.write_row(scrub_row(row))
 
     return len(rows)
 
