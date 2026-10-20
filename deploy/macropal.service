@@ -1,0 +1,29 @@
+[Unit]
+Description=MacroPal FastAPI Server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+User=macropal
+Group=macropal
+
+WorkingDirectory=/opt/macropal-server
+EnvironmentFile=/opt/macropal-server/.env
+
+ExecStart=/opt/macropal-server/venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 2 \
+    --proxy-headers \
+    --forwarded-allow-ips 127.0.0.1
+
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

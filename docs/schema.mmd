@@ -1,0 +1,133 @@
+erDiagram
+    custom_foods {
+        bigint id "PK"
+        bigint user_id "FK"
+        text name "required"
+        text brand
+        varchar barcode
+        text serving_size_text
+        numeric serving_quantity
+        varchar serving_unit
+        numeric energy_kcal_100g
+        numeric protein_100g
+        numeric carbs_100g
+        numeric fat_100g
+        numeric saturated_fat_100g
+        numeric sugars_100g
+        numeric fiber_100g
+        numeric salt_100g
+        datetime created_at "required"
+        datetime updated_at "required"
+    }
+    diary_entries {
+        bigint id "PK"
+        bigint user_id "FK"
+        bigint food_id "FK"
+        bigint custom_food_id "FK"
+        date date "required"
+        varchar meal "required"
+        numeric quantity_g "required"
+        datetime created_at "required"
+        datetime updated_at "required"
+    }
+    favorites {
+        bigint id "PK"
+        bigint user_id "FK"
+        bigint food_id "FK"
+        bigint custom_food_id "FK"
+        datetime created_at "required"
+    }
+    food_nutrients {
+        bigint id "PK"
+        bigint food_id "FK"
+        varchar nutrient_code "required"
+        varchar nutrient_name
+        numeric amount_100g
+        numeric amount_serving
+        varchar unit
+    }
+    foods {
+        bigint id "PK"
+        varchar barcode
+        text name "required"
+        text brand
+        text category
+        numeric energy_kcal_100g
+        numeric protein_100g
+        numeric carbs_100g
+        numeric fat_100g
+        varchar source "required"
+        text source_id
+        boolean verified "required"
+        boolean obsolete "required"
+        jsonb raw_data
+        tsvector search_vector
+        text "..._100g, images, nutriscore, 49 cols total"
+    }
+    goals {
+        bigint id "PK"
+        bigint user_id "FK"
+        date effective_from "required"
+        varchar goal
+        integer calorie_target
+        numeric protein_target
+        numeric carbs_target
+        numeric fat_target
+        datetime created_at "required"
+    }
+    meal_items {
+        bigint id "PK"
+        bigint meal_id "FK"
+        bigint food_id "FK"
+        bigint custom_food_id "FK"
+        numeric quantity_g "required"
+        integer position "required"
+    }
+    meals {
+        bigint id "PK"
+        bigint user_id "FK"
+        text name "required"
+        text notes
+        datetime created_at "required"
+        datetime updated_at "required"
+    }
+    users {
+        bigint id "PK"
+        varchar firebase_uid "required"
+        varchar username
+        text email
+        text display_name
+        date birth_date
+        varchar sex
+        numeric height_cm
+        varchar activity_level
+        varchar goal
+        integer calorie_target
+        numeric protein_target
+        numeric carbs_target
+        numeric fat_target
+        varchar unit_system "required"
+        datetime created_at "required"
+        datetime updated_at "required"
+    }
+    weights {
+        bigint id "PK"
+        bigint user_id "FK"
+        date date "required"
+        numeric weight_kg "required"
+        datetime created_at "required"
+    }
+    custom_foods |o--o{ diary_entries : custom_food_id
+    custom_foods |o--o{ favorites : custom_food_id
+    custom_foods |o--o{ meal_items : custom_food_id
+    foods |o--o{ diary_entries : food_id
+    foods |o--o{ favorites : food_id
+    foods |o--o{ meal_items : food_id
+    foods ||--o{ food_nutrients : food_id
+    meals ||--o{ meal_items : meal_id
+    users ||--o{ custom_foods : user_id
+    users ||--o{ diary_entries : user_id
+    users ||--o{ favorites : user_id
+    users ||--o{ goals : user_id
+    users ||--o{ meals : user_id
+    users ||--o{ weights : user_id
