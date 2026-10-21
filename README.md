@@ -388,14 +388,59 @@ trigger when the importer lands).
 
 ---
 
+## USDA FoodData Central import
+
+OpenFoodFacts covers packaged products; it is poor at generic whole foods and
+its micronutrient coverage is patchy. USDA is the opposite, so the two are
+complementary rather than competing. Foundation Foods and SR Legacy are
+imported; Branded is not, because it duplicates OFF and its `food_nutrient.csv`
+is far too large to group in memory.
+
+```bash
+cd /opt/macropal-server && source venv/bin/activate
+USDA_DATA_DIR=/home/macropal/usda python -m importers.usda download
+USDA_DATA_DIR=/home/macropal/usda python -m importers.usda load
+```
+
+Both datasets are small — a few megabytes zipped, roughly 8,000 foods — so this
+runs in minutes and needs no index juggling. Add `--dataset foundation` to do
+one at a time, `--limit N` to try a slice, or `--dry-run` to map without
+touching the database.
+
+No deduplication step is needed or wanted. Row identity is
+`UNIQUE (source, source_id)`, so USDA rows land beside the OpenFoodFacts ones
+and nothing collides. Collapsing a USDA and an OFF record of the same product
+into one canonical food is a later, separate problem.
+
+Three things the data forces, each verified against the April 2026 release:
+
+- **`data_type` must be filtered.** `food.csv` in the Foundation download holds
+  87,990 rows, of which only 469 are `foundation_food`. The rest are laboratory
+  sub-samples and market acquisitions, and importing them would fill `foods`
+  with duplicates of the same product.
+- **Energy is not one field.** Only 135 of those 469 foods carry nutrient
+  `1008` (Energy); 347 instead carry Atwater variants `2047`/`2048`, and 91
+  carry no energy at all. Reading `1008` alone leaves most foods, raw chicken
+  breast among them, with null calories. The importer falls back
+  `1008` -> `2048` -> `2047`.
+- **Nutrient codes need aliasing.** USDA names minerals `Iron, Fe` and
+  `Potassium, K`, which slugify to `iron-fe` and `potassium-k` and would never
+  line up with the OpenFoodFacts codes. `NUTRIENT_ALIASES` in
+  `importers/usda.py` maps the common ones by nutrient id onto the shared
+  spelling; anything unmapped falls back to a slug of its name.
+
+Amounts arrive per 100 g in the nutrient's own unit and are converted to grams,
+matching the OFF convention. Salt is derived as sodium x 2.5. Foundation and SR
+Legacy rows are marked `verified`, since they are laboratory reference data.
+Only 116 of 469 Foundation foods carry a serving portion, so a null
+`serving_size_text` is normal.
+
 ## Not built yet
 
 - `importers/openfoodfacts.py` — download dump, decompress, parse, normalize
   nutrients, `COPY` into a staging table, validate, merge into `foods`.
   Deliberately not `session.add()` per product: the dump is millions of rows.
-- `importers/usda.py` — maps `fdc_id` -> `source_id`, `gtin_upc` -> `barcode`,
-  `brand_owner`, `branded_food_category` -> `category`.
-- Deduplication across sources into one canonical food.
+- USDA Branded Foods, and deduplication across sources into one canonical food.
 - Recipes, friends/social, subscription status, admin and moderation.
 - Images in object storage rather than hotlinked source URLs.
 

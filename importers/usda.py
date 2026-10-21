@@ -47,6 +47,46 @@ COLUMN_NUTRIENTS: dict[str, str] = {
     "1253": "cholesterol_100g",
 }
 
+NUTRIENT_ALIASES: dict[str, str] = {
+    "1002": "nitrogen",
+    "1007": "ash",
+    "1009": "starch",
+    "1010": "sucrose",
+    "1011": "glucose",
+    "1012": "fructose",
+    "1013": "lactose",
+    "1014": "maltose",
+    "1018": "alcohol",
+    "1051": "water",
+    "1057": "caffeine",
+    "1087": "calcium",
+    "1089": "iron",
+    "1090": "magnesium",
+    "1091": "phosphorus",
+    "1092": "potassium",
+    "1095": "zinc",
+    "1098": "copper",
+    "1100": "iodine",
+    "1101": "manganese",
+    "1103": "selenium",
+    "1106": "vitamin-a",
+    "1109": "vitamin-e",
+    "1114": "vitamin-d",
+    "1162": "vitamin-c",
+    "1165": "vitamin-b1",
+    "1166": "vitamin-b2",
+    "1167": "vitamin-b3",
+    "1170": "vitamin-b5",
+    "1175": "vitamin-b6",
+    "1176": "biotin",
+    "1177": "vitamin-b9",
+    "1178": "vitamin-b12",
+    "1180": "choline",
+    "1185": "vitamin-k",
+    "1292": "monounsaturated-fat",
+    "1293": "polyunsaturated-fat",
+}
+
 MASS_UNITS: dict[str, Decimal] = {
     "G": Decimal(1),
     "MG": Decimal("0.001"),
@@ -269,7 +309,7 @@ def map_food(
         extra.append(
             {
                 "source_id": fdc_id,
-                "nutrient_code": slug(label),
+                "nutrient_code": NUTRIENT_ALIASES.get(nutrient_id) or slug(label),
                 "nutrient_name": label,
                 "amount_100g": amount * factor,
                 "amount_serving": None,
@@ -436,10 +476,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-dir", default=str(DEFAULT_DATA_DIR))
     parser.add_argument("--file", help="explicit path to a dataset zip")
     parser.add_argument(
-        "--datasets",
-        nargs="+",
-        default=["foundation", "sr_legacy"],
+        "--dataset",
+        dest="datasets",
+        action="append",
         choices=sorted(DATASETS),
+        help="repeatable; defaults to foundation and sr_legacy",
     )
     parser.add_argument("-v", "--verbose", action="store_true")
 
@@ -465,6 +506,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if not args.datasets:
+        args.datasets = ["foundation", "sr_legacy"]
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
